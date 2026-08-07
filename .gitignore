@@ -22,3 +22,7 @@ Thumbs.db
 .agents
 .antigravitycli
 .grok
+.opencode
+
+# temp目录
+temp/
