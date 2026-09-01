@@ -1,6 +1,6 @@
 # skills-resume
 
-一套跨 AI 编码工具的「会话接管（resume）」Skills 合集。当你的某个 AI 编码助手（Antigravity CLI、Claude Code、Codex、Copilot、Cursor、DeepSeek Harness、Grok、Kimi Code、OpenCode、Qoder）的会话中断、或你想把进行中的任务**交接给另一个模型/工具**继续时，这些 Skill 会读取对应工具在本机的会话记录，解析消息、工具调用与结果，生成一份结构化的「接管摘要」，让当前模型带着完整上下文接续未完成的工作。
+一套跨 AI 编码工具的「会话接管（resume）」Skills 合集。当你的某个 AI 编码助手（Antigravity CLI、Claude Code、Codex、Copilot、Cursor、DeepSeek Harness、Grok、Kimi Code、OpenCode、Qoder、ZCode）的会话中断、或你想把进行中的任务**交接给另一个模型/工具**继续时，这些 Skill 会读取对应工具在本机的会话记录，解析消息、工具调用与结果，生成一份结构化的「接管摘要」，让当前模型带着完整上下文接续未完成的工作。
 
 每个 Skill 都提供可移植的 Node.js 与 Python 等价实现，**不依赖任何模型专属 API**，因此任意 agent 都可以调用。
 
@@ -18,6 +18,7 @@
 | [resume-kimi](skills/resume-kimi/) | Kimi Code CLI | `~/.kimi-code` 下的 session_index、state.json 与 wire.jsonl |
 | [resume-opencode](skills/resume-opencode/) | OpenCode | `~/.local/share/opencode/opencode.db`（兼容旧版 storage JSON） |
 | [resume-qoder](skills/resume-qoder/) | Qoder CLI | `~/.qoder/projects` 下的 JSONL transcript、state.json（兼容旧版 session 元数据） |
+| [resume-zcode](skills/resume-zcode/) | ZCode | `~/.zcode/cli/db/db.sqlite` SQLite 会话库（session/message/part/todo 表） |
 
 ## 目录结构
 
@@ -37,7 +38,8 @@ skills/
 ├── resume-grok/
 ├── resume-kimi/
 ├── resume-opencode/
-└── resume-qoder/
+├── resume-qoder/
+└── resume-zcode/
 ```
 
 每个 Skill 都包含独立 `README.md`、`SKILL.md` 与 `scripts/` 下的 Node/Python 入口。
@@ -70,7 +72,7 @@ Windows 下可用 `mklink /J` 创建目录联接，Linux/macOS 下用 `ln -s`。
 不用手动执行任何命令，直接在当前使用的 agent 对话中提出安装请求，agent 会自动完成克隆、复制/链接到对应 skills 目录的全过程，例如：
 
 - 「把 https://github.com/xiaosauros/skills-resume 里的 resume-claude 安装到你的 skills 目录」
-- 「克隆 xiaosauros/skills-resume 这个仓库，把全部 10 个 Skill 安装到用户级 skills 目录」
+- 「克隆 xiaosauros/skills-resume 这个仓库，把全部 11 个 Skill 安装到用户级 skills 目录」
 - 「把 https://github.com/xiaosauros/skills-resume 里的 resume-codex 装成项目级的 Skill」
 
 agent 会自行判断目标目录（用户级或项目级）、选择复制或软链接方式并完成安装。安装后可直接用自然语言验证：「列出你已安装的 skills」。
@@ -92,6 +94,7 @@ agent 会自行判断目标目录（用户级或项目级）、选择复制或�
 - 「把 Cursor 里那个调试到一半的会话交给当前模型继续」
 - 「继续最近的 OpenCode 会话」
 - 「把 Qoder 里的任务交给当前模型继续」
+- 「继续最近的 ZCode 会话，看看还有什么没做完」
 
 已知会话 ID 时可以直接指定（支持 ID 前缀）：
 
@@ -108,6 +111,7 @@ agent 会自行判断目标目录（用户级或项目级）、选择复制或�
 /resume-kimi 继续最近一个会话的未完成工作
 /resume-opencode 继续当前项目最近的会话
 /resume-qoder --session 9f8e7d6c
+/resume-zcode 继续当前项目最近的会话
 ```
 
 Skill 会引导 agent：列出会话 → 生成接管摘要 → 基于摘要与当前代码现场（文件系统 + Git）继续工作。
@@ -133,9 +137,9 @@ node skills/resume-claude/scripts/resume_claude.js --session <会话ID或前缀>
 python -X utf8 skills/resume-claude/scripts/resume_claude.py --list
 ```
 
-其余 Skill 同理，替换脚本路径即可（`resume-agy` / `resume-codex` / `resume-copilot` / `resume-cursor` / `resume-dsh` / `resume-grok` / `resume-kimi` / `resume-opencode` / `resume-qoder`）。
+其余 Skill 同理，替换脚本路径即可（`resume-agy` / `resume-codex` / `resume-copilot` / `resume-cursor` / `resume-dsh` / `resume-grok` / `resume-kimi` / `resume-opencode` / `resume-qoder` / `resume-zcode`）。
 
-OpenCode 当前版本使用 SQLite，Node 实现需要 Node.js 22.5+ 的内置 `node:sqlite`；较低版本 Node 请直接运行对应 Python 脚本。
+OpenCode 与 ZCode 当前版本均使用 SQLite，Node 实现需要 Node.js 22.5+ 的内置 `node:sqlite`；较低版本 Node 请直接运行对应 Python 脚本。
 
 DeepSeek Harness 的会话日志使用多帧 Zstandard；`resume-dsh` 的 Node 实现需要带标准库 Zstandard 支持的较新 Node.js，独立 Python 实现使用 Python 3.14+ 标准库 `compression.zstd`（较旧 Python 可安装 `zstandard` 包）。
 
