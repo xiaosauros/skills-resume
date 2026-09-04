@@ -1,6 +1,6 @@
 # skills-resume
 
-一套跨 AI 编码工具的「会话接管（resume）」Skills 合集。当你的某个 AI 编码助手（Antigravity CLI、Claude Code、Codex、Copilot、Cursor、DeepSeek Harness、Grok、Kimi Code、OpenCode、Qoder、WorkBuddy、ZCode）的会话中断、或你想把进行中的任务**交接给另一个模型/工具**继续时，这些 Skill 会读取对应工具在本机的会话记录，解析消息、工具调用与结果，生成一份结构化的「接管摘要」，让当前模型带着完整上下文接续未完成的工作。
+一套跨 AI 编码工具的「会话接管（resume）」Skills 合集。当你的某个 AI 编码助手（Antigravity CLI、Claude Code、Codex、Copilot、Cursor、DeepSeek Harness、Grok、Kimi Code、OpenCode、Pi、Qoder、WorkBuddy、ZCode）的会话中断、或你想把进行中的任务**交接给另一个模型/工具**继续时，这些 Skill 会读取对应工具在本机的会话记录，解析消息、工具调用与结果，生成一份结构化的「接管摘要」，让当前模型带着完整上下文接续未完成的工作。
 
 每个 Skill 都提供可移植的 Node.js 与 Python 等价实现，**不依赖任何模型专属 API**，因此任意 agent 都可以调用。
 
@@ -17,6 +17,7 @@
 | [resume-grok](skills/resume-grok/) | Grok Build CLI | `~/.grok` 下的 summary.json 与 chat_history.jsonl（回退 events/updates） |
 | [resume-kimi](skills/resume-kimi/) | Kimi Code CLI | `~/.kimi-code` 下的 session_index、state.json 与 wire.jsonl |
 | [resume-opencode](skills/resume-opencode/) | OpenCode | `~/.local/share/opencode/opencode.db`（兼容旧版 storage JSON） |
+| [resume-pi](skills/resume-pi/) | Pi Coding Agent（pi） | `~/.pi/agent/sessions` 下的 JSONL 会话树（含 compact / 分支摘要） |
 | [resume-qoder](skills/resume-qoder/) | Qoder CLI | `~/.qoder/projects` 下的 JSONL transcript、state.json（兼容旧版 session 元数据） |
 | [resume-workbuddy](skills/resume-workbuddy/) | WorkBuddy | `~/.workbuddy/projects` 下的 JSONL 会话记录、任务产物与子 agent 记录 |
 | [resume-zcode](skills/resume-zcode/) | ZCode | `~/.zcode/cli/db/db.sqlite` SQLite 会话库（session/message/part/todo 表） |
@@ -39,6 +40,7 @@ skills/
 ├── resume-grok/
 ├── resume-kimi/
 ├── resume-opencode/
+├── resume-pi/
 ├── resume-qoder/
 ├── resume-workbuddy/
 └── resume-zcode/
@@ -74,7 +76,7 @@ Windows 下可用 `mklink /J` 创建目录联接，Linux/macOS 下用 `ln -s`。
 不用手动执行任何命令，直接在当前使用的 agent 对话中提出安装请求，agent 会自动完成克隆、复制/链接到对应 skills 目录的全过程，例如：
 
 - 「把 https://github.com/xiaosauros/skills-resume 里的 resume-claude 安装到你的 skills 目录」
-- 「克隆 xiaosauros/skills-resume 这个仓库，把全部 12 个 Skill 安装到用户级 skills 目录」
+- 「克隆 xiaosauros/skills-resume 这个仓库，把全部 13 个 Skill 安装到用户级 skills 目录」
 - 「把 https://github.com/xiaosauros/skills-resume 里的 resume-codex 装成项目级的 Skill」
 
 agent 会自行判断目标目录（用户级或项目级）、选择复制或软链接方式并完成安装。安装后可直接用自然语言验证：「列出你已安装的 skills」。
@@ -95,6 +97,7 @@ agent 会自行判断目标目录（用户级或项目级）、选择复制或�
 - 「继续最近的 DSH / DeepSeek Harness 会话」
 - 「把 Cursor 里那个调试到一半的会话交给当前模型继续」
 - 「继续最近的 OpenCode 会话」
+- 「继续最近的 Pi / pi CLI 会话」
 - 「把 Qoder 里的任务交给当前模型继续」
 - 「继续最近的 WorkBuddy 会话，看看还有什么没做完」
 - 「继续最近的 ZCode 会话，看看还有什么没做完」
@@ -113,6 +116,7 @@ agent 会自行判断目标目录（用户级或项目级）、选择复制或�
 /resume-dsh 继续当前项目最近的会话
 /resume-kimi 继续最近一个会话的未完成工作
 /resume-opencode 继续当前项目最近的会话
+/resume-pi 继续当前项目最近的会话
 /resume-qoder --session 9f8e7d6c
 /resume-workbuddy 继续当前项目最近的会话
 /resume-zcode 继续当前项目最近的会话
@@ -141,7 +145,7 @@ node skills/resume-claude/scripts/resume_claude.js --session <会话ID或前缀>
 python -X utf8 skills/resume-claude/scripts/resume_claude.py --list
 ```
 
-其余 Skill 同理，替换脚本路径即可（`resume-agy` / `resume-codex` / `resume-copilot` / `resume-cursor` / `resume-dsh` / `resume-grok` / `resume-kimi` / `resume-opencode` / `resume-qoder` / `resume-zcode`）。
+其余 Skill 同理，替换脚本路径即可（`resume-agy` / `resume-codex` / `resume-copilot` / `resume-cursor` / `resume-dsh` / `resume-grok` / `resume-kimi` / `resume-opencode` / `resume-pi` / `resume-qoder` / `resume-zcode`）。
 
 OpenCode 与 ZCode 当前版本均使用 SQLite，Node 实现需要 Node.js 22.5+ 的内置 `node:sqlite`；较低版本 Node 请直接运行对应 Python 脚本。
 
