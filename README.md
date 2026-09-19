@@ -1,6 +1,6 @@
 # skills-resume
 
-一套跨 AI 编码工具的「会话接管（resume）」Skills 合集。当你的某个 AI 编码助手（Antigravity CLI、Claude Code、Codex、Copilot、Cursor、DeepSeek Harness、Grok、Hermes Agent、Kilo Code、Kimi Code、MiniMax Code、MiMo-Code、OpenCode、Pi、Qoder、WorkBuddy、ZCode）的会话中断、或你想把进行中的任务**交接给另一个模型/工具**继续时，这些 Skill 会读取对应工具在本机的会话记录，解析消息、工具调用与结果，生成一份结构化的「接管摘要」，让当前模型带着完整上下文接续未完成的工作。
+一套跨 AI 编码工具的「会话接管（resume）」Skills 合集。当你的某个 AI 编码助手（Antigravity CLI、Claude Code、Codex、Copilot、Continue、Cursor、DeepSeek Harness、Grok、Hermes Agent、Kilo Code、Kimi Code、MiniMax Code、MiMo-Code、OpenCode、Pi、Qoder、WorkBuddy、ZCode）的会话中断、或你想把进行中的任务**交接给另一个模型/工具**继续时，这些 Skill 会读取对应工具在本机的会话记录，解析消息、工具调用与结果，生成一份结构化的「接管摘要」，让当前模型带着完整上下文接续未完成的工作。
 
 每个 Skill 都提供可移植的 Node.js 与 Python 等价实现，**不依赖任何模型专属 API**，因此任意 agent 都可以调用。
 
@@ -12,6 +12,7 @@
 | [resume-claude](skills/resume-claude/) | Claude Code | `~/.claude/projects/<项目>/*.jsonl` |
 | [resume-codex](skills/resume-codex/) | Codex CLI | `~/.codex` 下的 rollout 记录与 session_index |
 | [resume-copilot](skills/resume-copilot/) | GitHub Copilot CLI | `~/.copilot/session-state` 下的 workspace.yaml + events.jsonl |
+| [resume-continue](skills/resume-continue/) | Continue（VS Code / JetBrains 扩展、`cn` CLI） | `~/.continue/sessions` 下的会话 JSON（IDE 扩展与 CLI 共用；受 `CONTINUE_GLOBAL_DIR` 影响） |
 | [resume-cursor](skills/resume-cursor/) | Cursor IDE Agent/Composer | Cursor 的 SQLite 会话库（state.vscdb） |
 | [resume-dsh](skills/resume-dsh/) | DeepSeek Harness（`dsh`） | `~/.dsh` 下的多帧 session.jsonl.zstd 与 session_projcache.json |
 | [resume-grok](skills/resume-grok/) | Grok Build CLI | `~/.grok` 下的 summary.json 与 chat_history.jsonl（回退 events/updates） |
@@ -39,6 +40,7 @@ skills/
 ├── resume-claude/
 ├── resume-codex/
 ├── resume-copilot/
+├── resume-continue/
 ├── resume-cursor/
 ├── resume-dsh/
 ├── resume-grok/
@@ -102,6 +104,7 @@ agent 会自行判断目标目录（用户级或项目级）、选择复制或�
 - 「继续我之前的 Claude 会话，把没做完的任务完成」
 - 「继续最近的 agy / Antigravity CLI 会话」
 - 「接管 Codex 的会话，看看还剩什么没做」
+- 「继续最近的 Continue 会话（VS Code/JetBrains 扩展或 cn CLI 都可以）」
 - 「继续最近的 DSH / DeepSeek Harness 会话」
 - 「继续最近的 Hermes 会话，看看修到哪了」
 - 「继续最近的 Kilo / Kilo Code 会话」
@@ -126,6 +129,7 @@ agent 会自行判断目标目录（用户级或项目级）、选择复制或�
 /resume-claude 列出当前项目的会话
 /resume-agy --conversation a1b2c3d4
 /resume-codex --session a1b2c3d4
+/resume-continue 继续当前项目最近的会话
 /resume-dsh 继续当前项目最近的会话
 /resume-hermes 继续当前项目最近的会话
 /resume-kilo 继续当前项目最近的会话
@@ -162,7 +166,9 @@ node skills/resume-claude/scripts/resume_claude.js --session <会话ID或前缀>
 python -X utf8 skills/resume-claude/scripts/resume_claude.py --list
 ```
 
-其余 Skill 同理，替换脚本路径即可（`resume-agy` / `resume-codex` / `resume-copilot` / `resume-cursor` / `resume-dsh` / `resume-grok` / `resume-hermes` / `resume-kilo` / `resume-kimi` / `resume-minimax` / `resume-mimo` / `resume-opencode` / `resume-pi` / `resume-qoder` / `resume-workbuddy` / `resume-zcode`）。
+其余 Skill 同理，替换脚本路径即可（`resume-agy` / `resume-codex` / `resume-copilot` / `resume-continue` / `resume-cursor` / `resume-dsh` / `resume-grok` / `resume-hermes` / `resume-kilo` / `resume-kimi` / `resume-minimax` / `resume-mimo` / `resume-opencode` / `resume-pi` / `resume-qoder` / `resume-workbuddy` / `resume-zcode`）。
+
+`resume-continue` 读取的是纯 JSON 会话文件，两套实现均无 SQLite / Zstandard 等额外要求，任意 Node.js 与 Python 3.7+ 版本均可运行。
 
 OpenCode、Kilo（kilo.db）、MiniMax（v2/sqlite/runtime-state.sqlite）、MiMo（mimocode.db）、ZCode 与 Hermes 当前版本均使用 SQLite，Node 实现需要 Node.js 22.5+ 的内置 `node:sqlite`；较低版本 Node 请直接运行对应 Python 脚本（`resume-minimax` 在低版本 Node 下会自动降级为仅读取会话 JSONL 并在提示中说明）。
 
