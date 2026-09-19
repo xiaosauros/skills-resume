@@ -132,15 +132,18 @@ def sessions_dir_candidates(data_dir):
     if not root.is_dir():
         return []
     dirs = []
-    for day in sorted(root.iterdir()):
-        if not day.is_dir():
+    for year in sorted(root.iterdir()):
+        if not year.is_dir():
             continue
-        for month in sorted(day.iterdir()):
+        for month in sorted(year.iterdir()):
             if not month.is_dir():
                 continue
-            for time_dir in sorted(month.iterdir()):
-                if time_dir.is_dir():
-                    dirs.append(time_dir)
+            for day in sorted(month.iterdir()):
+                if not day.is_dir():
+                    continue
+                for time_dir in sorted(day.iterdir()):
+                    if time_dir.is_dir():
+                        dirs.append(time_dir)
     return dirs
 
 
@@ -476,7 +479,7 @@ def load_session(data_dir, meta):
         meta["model"] = normalized["model"]
     if not meta["title"]:
         first_user = next((item for item in normalized["items"] if item["kind"] == "user_text"), None)
-        meta["title"] = first_user["text"] if first_user else meta["session_id"]
+        meta["title"] = first_user["text"] if first_user else (normalized["latest_compaction"] or meta["session_id"])
     meta["title"] = meta["title"].splitlines()[0].strip() if meta["title"].splitlines() else ""
     meta["title"] = meta["title"] or meta["session_id"]
     timestamps = [item["timestamp"] for item in normalized["items"] if item["timestamp"]]
@@ -670,8 +673,9 @@ def pick_session(sessions, session_arg, project_path):
     return project_sessions(sessions, project_path)[0] if project_sessions(sessions, project_path) else None
 
 
-def print_list(sessions, project_path, limit):
-    selected = project_sessions(sessions, project_path)
+def print_list(project_path, limit, selected=None):
+    if selected is None:
+        selected = []
     shown = selected[:limit] if limit > 0 else selected
     print(f"当前项目: {project_path}")
     print(f"找到 {len(selected)} 个会话{f'（仅显示最近 {len(shown)} 个）' if len(shown) < len(selected) else ''}：\n")
@@ -731,8 +735,12 @@ def main():
     if not used_db:
         print("提示：SQLite 会话库不可用，仅从会话 JSONL 读取（标题与项目路径信息可能不完整）。", file=sys.stderr)
     project_path = str(Path(args["project"]).resolve())
+    can_filter_project = used_db
     if args["list"]:
         selected = project_sessions(sessions, project_path)
+        if not selected and not can_filter_project:
+            print("提示：文件模式下无法判断会话所属项目，显示全部会话。", file=sys.stderr)
+            selected = sessions
         if not selected:
             print(f"错误：未找到项目 {project_path} 的 MiniMax Code 会话。可用 --session ID 跨项目查找。", file=sys.stderr)
             sys.exit(1)
@@ -742,11 +750,17 @@ def main():
             normalized = load_messages_jsonl(data_dir, meta)
             if normalized is None and meta["source"] == "sqlite":
                 normalized = load_messages_rows(data_dir, meta["session_id"])
-            first_user = next((item for item in (normalized or {}).get("items", []) if item["kind"] == "user_text"), None)
-            meta["title"] = first_user["text"].splitlines()[0].strip() if first_user else ""
-        print_list(sessions, project_path, args["limit"])
+            items = (normalized or {}).get("items", [])
+            first_user = next((item for item in items if item["kind"] == "user_text"), None)
+            if first_user:
+                meta["title"] = first_user["text"].splitlines()[0].strip()
+            else:
+                meta["title"] = ((normalized or {}).get("latest_compaction") or "").splitlines()[0].strip() if (normalized or {}).get("latest_compaction") else ""
+        print_list(project_path, args["limit"], selected)
         return
     target = pick_session(sessions, args["session"], project_path)
+    if target is None and not can_filter_project and not args["session"]:
+        target = sessions[0]
     if not target:
         print(f"错误：未匹配到会话 '{args['session'] or '当前项目'}'。", file=sys.stderr)
         sys.exit(1)

@@ -88,22 +88,28 @@ function openDb(dbFile) {
 
 function sessionsDirCandidates(dataDir) {
   const root = historyRoot(dataDir);
-  let days;
-  try { days = fs.readdirSync(root, { withFileTypes: true }); } catch (_) { return []; }
+  let years;
+  try { years = fs.readdirSync(root, { withFileTypes: true }); } catch (_) { return []; }
   const dirs = [];
-  for (const day of days) {
-    if (!day.isDirectory()) continue;
-    const dayPath = path.join(root, day.name);
+  for (const year of years) {
+    if (!year.isDirectory()) continue;
+    const yearPath = path.join(root, year.name);
     let months;
-    try { months = fs.readdirSync(dayPath, { withFileTypes: true }); } catch (_) { continue; }
+    try { months = fs.readdirSync(yearPath, { withFileTypes: true }); } catch (_) { continue; }
     for (const month of months) {
       if (!month.isDirectory()) continue;
-      const monthPath = path.join(dayPath, month.name);
-      let times;
-      try { times = fs.readdirSync(monthPath, { withFileTypes: true }); } catch (_) { continue; }
-      for (const time of times) {
-        if (!time.isDirectory()) continue;
-        dirs.push(path.join(monthPath, time.name));
+      const monthPath = path.join(yearPath, month.name);
+      let days;
+      try { days = fs.readdirSync(monthPath, { withFileTypes: true }); } catch (_) { continue; }
+      for (const day of days) {
+        if (!day.isDirectory()) continue;
+        const dayPath = path.join(monthPath, day.name);
+        let times;
+        try { times = fs.readdirSync(dayPath, { withFileTypes: true }); } catch (_) { continue; }
+        for (const time of times) {
+          if (!time.isDirectory()) continue;
+          dirs.push(path.join(dayPath, time.name));
+        }
       }
     }
   }
@@ -426,7 +432,7 @@ function loadSession(dataDir, meta) {
   if (!meta.model && normalized.model) meta.model = normalized.model;
   if (!meta.title) {
     const firstUser = normalized.items.find((item) => item.kind === 'user_text');
-    meta.title = firstUser ? firstUser.text : meta.session_id;
+    meta.title = firstUser ? firstUser.text : (normalized.latestCompaction || meta.session_id);
   }
   meta.title = meta.title.split(/\r?\n/)[0].trim() || meta.session_id;
   const timestamps = normalized.items.filter((item) => item.timestamp).map((item) => item.timestamp);
@@ -580,8 +586,9 @@ function pickSession(sessions, sessionArg, projectPath) {
   return projectSessions(sessions, projectPath)[0] || null;
 }
 
-function printList(sessions, projectPath, limit) {
-  const selected = projectSessions(sessions, projectPath), shown = limit > 0 ? selected.slice(0, limit) : selected;
+function printList(sessions, projectPath, limit, selected) {
+  selected = selected || projectSessions(sessions, projectPath);
+  const shown = limit > 0 ? selected.slice(0, limit) : selected;
   console.log(`当前项目: ${projectPath}`);
   console.log(`找到 ${selected.length} 个会话${shown.length < selected.length ? `（仅显示最近 ${shown.length} 个）` : ''}：\n`);
   shown.forEach((meta, index) => {
@@ -656,8 +663,13 @@ function main() {
     }
   }
   const projectPath = path.resolve(args.project);
+  const canFilterProject = usedDb;
   if (args.list) {
-    const selected = projectSessions(sessions, projectPath);
+    let selected = projectSessions(sessions, projectPath);
+    if (!selected.length && !canFilterProject) {
+      console.error('提示：文件模式下无法判断会话所属项目，显示全部会话。');
+      selected = sessions;
+    }
     if (!selected.length) {
       console.error(`错误：未找到项目 ${projectPath} 的 MiniMax Code 会话。可用 --session ID 跨项目查找。`);
       process.exit(1);
@@ -666,13 +678,17 @@ function main() {
       if (meta.title) continue;
       const normalized = loadMessagesJsonl(dataDir, meta)
         || (meta.source === 'sqlite' ? loadMessagesRows(dataDir, meta.session_id) : null);
-      const firstUser = normalized && normalized.items.find((item) => item.kind === 'user_text');
-      meta.title = firstUser ? firstUser.text.split(/\r?\n/)[0].trim() : '';
+      const items = (normalized && normalized.items) || [];
+      const firstUser = items.find((item) => item.kind === 'user_text');
+      meta.title = firstUser
+        ? firstUser.text.split(/\r?\n/)[0].trim()
+        : ((normalized && normalized.latestCompaction) || '').split(/\r?\n/)[0].trim();
     }
-    printList(sessions, projectPath, args.limit);
+    printList(sessions, projectPath, args.limit, selected);
     return;
   }
-  const target = pickSession(sessions, args.session, projectPath);
+  const target = pickSession(sessions, args.session, projectPath)
+    || (!canFilterProject && !args.session ? sessions[0] : null);
   if (!target) { console.error(`错误：未匹配到会话 '${args.session || '当前项目'}'。`); process.exit(1); }
   let session;
   try { session = loadSession(dataDir, target); } catch (error) { console.error('错误：解析会话失败：' + error.message); process.exit(1); }
