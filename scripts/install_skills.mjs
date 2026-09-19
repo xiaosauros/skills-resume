@@ -37,6 +37,7 @@ function toolTable() {
     ['minimax',   path.join(home, '.minimax', 'skills'),           'MiniMax Code (mcode)'],
     ['mimo',      path.join(home, '.mimo', 'skills'),              'MiMo-Code'],
     ['opencode',  path.join(home, '.config', 'opencode', 'skills'), 'OpenCode'],
+    ['openclaw',  path.join(home, '.openclaw', 'skills'),           'OpenClaw'],
     ['pi',        path.join(home, '.pi', 'agent', 'skills'),       'Pi Coding Agent'],
     ['qoder',     path.join(home, '.qoder', 'skills'),             'Qoder CLI'],
     ['workbuddy', path.join(home, '.workbuddy', 'skills'),         'WorkBuddy'],

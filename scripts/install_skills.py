@@ -47,6 +47,7 @@ def tool_table():
         ("minimax",   home / ".minimax" / "skills",           "MiniMax Code (mcode)"),
         ("mimo",      home / ".mimo" / "skills",              "MiMo-Code"),
         ("opencode",  home / ".config" / "opencode" / "skills", "OpenCode"),
+        ("openclaw",  home / ".openclaw" / "skills",             "OpenClaw"),
         ("pi",        home / ".pi" / "agent" / "skills",      "Pi Coding Agent"),
         ("qoder",     home / ".qoder" / "skills",             "Qoder CLI"),
         ("workbuddy", home / ".workbuddy" / "skills",         "WorkBuddy"),
