@@ -30,6 +30,9 @@
 ## 目录结构
 
 ```
+scripts/
+├── install_skills.mjs        # 安装脚本（Node.js）：把 skills 装到各工具的 skills 目录
+└── install_skills.py         # 安装脚本（Python，等价实现）
 skills/
 ├── resume-agy/
 │   ├── README.md             # Skill 简介与用法
@@ -67,7 +70,47 @@ skills/
 
 Skills 通过「把 Skill 目录放进 agent 的 skills 目录」来安装。每个 Skill 都是自包含目录（`SKILL.md` + `scripts/`），按需安装其中一个或多个即可。
 
-### 方式一：克隆后复制/链接
+### 方式一：安装脚本（推荐）
+
+仓库自带两个等价的安装脚本：`scripts/install_skills.py`（Python）与 `scripts/install_skills.mjs`（Node.js），把 skills 一键安装/链接到各 AI 编码工具的 skills 目录。默认复制安装全部 skills 到全部支持的工具，**目标已存在时跳过（不覆盖）**：
+
+```bash
+# 预览将要执行的操作（不实际写入）
+python scripts/install_skills.py -n
+node scripts/install_skills.mjs -n
+
+# 安装全部 skills 到全部支持的工具（默认复制；已存在则跳过）
+python scripts/install_skills.py
+node scripts/install_skills.mjs
+
+# 只安装指定 skills（位置参数或 --skills，接受全名 resume-claude 或简写 claude）
+node scripts/install_skills.mjs resume-claude resume-codex
+python scripts/install_skills.py --skills claude,kimi --tool zcode
+
+# 指定目标工具（--list-tools 查看支持列表，all=全部）
+node scripts/install_skills.mjs --tool claude,codex
+
+# 改用链接代替复制（Windows 下自动使用目录联接 junction，无需管理员权限）
+node scripts/install_skills.mjs --link
+
+# 已存在也强制覆盖
+python scripts/install_skills.py --force
+
+# 安装到任意指定目录（例如项目级 skills 目录）
+node scripts/install_skills.mjs --dir .claude/skills resume-claude
+
+# 查看可安装的 skills / 支持的目标工具及各自目录约定
+node scripts/install_skills.mjs --list
+node scripts/install_skills.mjs --list-tools
+```
+
+说明：
+
+- 脚本内置了各工具用户级 skills 目录的约定映射（`--list-tools` 可查看），并以「目录是否存在」标注；个别工具的约定如有变化，可用 `--dir` 直接指定目标目录
+- `--link` 模式建立的是指向本仓库的链接，仓库更新后各工具即时生效；配合 `--force` 可把已复制安装的目标改为链接
+- 两个脚本参数与行为完全一致，任选其一即可（Node.js ≥ 16.7 / Python 3.8+，无第三方依赖）
+
+### 方式二：克隆后复制/链接
 
 ```bash
 git clone git@github.com:xiaosauros/skills-resume.git
@@ -81,7 +124,7 @@ git clone git@github.com:xiaosauros/skills-resume.git
 
 Windows 下可用 `mklink /J` 创建目录联接，Linux/macOS 下用 `ln -s`。
 
-### 方式二：让 agent 自己安装（自然语言）
+### 方式三：让 agent 自己安装（自然语言）
 
 不用手动执行任何命令，直接在当前使用的 agent 对话中提出安装请求，agent 会自动完成克隆、复制/链接到对应 skills 目录的全过程，例如：
 
@@ -91,7 +134,7 @@ Windows 下可用 `mklink /J` 创建目录联接，Linux/macOS 下用 `ln -s`。
 
 agent 会自行判断目标目录（用户级或项目级）、选择复制或软链接方式并完成安装。安装后可直接用自然语言验证：「列出你已安装的 skills」。
 
-### 方式三：不用 Skill 系统，直接跑脚本
+### 方式四：不用 Skill 系统，直接跑脚本
 
 脚本可独立使用，不安装 Skill 也能工作（见下文「直接使用脚本」）。
 
