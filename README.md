@@ -11,6 +11,7 @@
 | [resume-agy](skills/resume-agy/) | Antigravity CLI（`agy`） | `~/.gemini/antigravity/brain` 下的 transcript.jsonl 与任务产物 |
 | [resume-claude](skills/resume-claude/) | Claude Code | `~/.claude/projects/<项目>/*.jsonl` |
 | [resume-codex](skills/resume-codex/) | Codex CLI | `~/.codex` 下的 rollout 记录与 session_index |
+| [resume-convert](skills/resume-convert/) | 全部 18 种工具 → Claude Code 原生会话 | 把各工具会话转换成 Claude Code 原生 JSONL 写入 `~/.claude/projects`，用原生 `/resume` 完整恢复（含工具调用与结果） |
 | [resume-copilot](skills/resume-copilot/) | GitHub Copilot CLI | `~/.copilot/session-state` 下的 workspace.yaml + events.jsonl |
 | [resume-continue](skills/resume-continue/) | Continue（VS Code / JetBrains 扩展、`cn` CLI） | `~/.continue/sessions` 下的会话 JSON（IDE 扩展与 CLI 共用；受 `CONTINUE_GLOBAL_DIR` 影响） |
 | [resume-cursor](skills/resume-cursor/) | Cursor IDE Agent/Composer | Cursor 的 SQLite 会话库（state.vscdb） |
@@ -43,6 +44,7 @@ skills/
 │       └── resume_agy.py     # Python 实现（等价）
 ├── resume-claude/
 ├── resume-codex/
+├── resume-convert/           # 会话格式转换：各工具会话 -> Claude Code 原生 JSONL（/resume 可恢复）
 ├── resume-copilot/
 ├── resume-continue/
 ├── resume-cursor/
@@ -131,7 +133,7 @@ Windows 下可用 `mklink /J` 创建目录联接，Linux/macOS 下用 `ln -s`。
 不用手动执行任何命令，直接在当前使用的 agent 对话中提出安装请求，agent 会自动完成克隆、复制/链接到对应 skills 目录的全过程，例如：
 
 - 「把 https://github.com/xiaosauros/skills-resume 里的 resume-claude 安装到你的 skills 目录」
-- 「克隆 xiaosauros/skills-resume 这个仓库，把全部 19 个 Skill 安装到用户级 skills 目录」
+- 「克隆 xiaosauros/skills-resume 这个仓库，把全部 20 个 Skill 安装到用户级 skills 目录」
 - 「把 https://github.com/xiaosauros/skills-resume 里的 resume-codex 装成项目级的 Skill」
 
 agent 会自行判断目标目录（用户级或项目级）、选择复制或软链接方式并完成安装。安装后可直接用自然语言验证：「列出你已安装的 skills」。
@@ -163,6 +165,7 @@ agent 会自行判断目标目录（用户级或项目级）、选择复制或�
 - 「把 Qoder 里的任务交给当前模型继续」
 - 「继续最近的 WorkBuddy 会话，看看还有什么没做完」
 - 「继续最近的 ZCode 会话，看看还有什么没做完」
+- 「把最近的 Codex 会话转成 Claude Code 原生会话，之后用 /resume 完整恢复」
 
 已知会话 ID 时可以直接指定（支持 ID 前缀）：
 
@@ -188,9 +191,10 @@ agent 会自行判断目标目录（用户级或项目级）、选择复制或�
 /resume-qoder --session 9f8e7d6c
 /resume-workbuddy 继续当前项目最近的会话
 /resume-zcode 继续当前项目最近的会话
+/resume-convert --tool codex --session a1b2c3d4
 ```
 
-Skill 会引导 agent：列出会话 → 生成接管摘要 → 基于摘要与当前代码现场（文件系统 + Git）继续工作。
+Skill 会引导 agent：列出会话 → 生成接管摘要 → 基于摘要与当前代码现场（文件系统 + Git）继续工作。resume-convert 的流程不同：把源工具会话转换成 Claude Code 原生 JSONL 写入 `~/.claude/projects`，之后用原生 `/resume` 直接恢复完整对话（含工具调用与结果）。
 
 ### 直接使用脚本
 
@@ -213,13 +217,26 @@ node skills/resume-claude/scripts/resume_claude.js --session <会话ID或前缀>
 python -X utf8 skills/resume-claude/scripts/resume_claude.py --list
 ```
 
+resume-convert 的入口是 `export_to_claude`（不遵循 `resume_*` 命名），用法：
+
+```bash
+# 列出某工具本机可转换的会话（不带 --tool 则列出全部 18 种工具）
+node skills/resume-convert/scripts/export_to_claude.js --list --tool codex
+
+# 试转换（只构建与校验，不写盘）
+node skills/resume-convert/scripts/export_to_claude.js --tool codex --dry-run
+
+# 正式转换：默认写入 ~/.claude/projects，随后在 Claude Code 中用原生 /resume 恢复
+node skills/resume-convert/scripts/export_to_claude.js --tool codex --session <会话ID或前缀>
+```
+
 其余 Skill 同理，替换脚本路径即可（`resume-agy` / `resume-codex` / `resume-copilot` / `resume-continue` / `resume-cursor` / `resume-dsh` / `resume-grok` / `resume-hermes` / `resume-kilo` / `resume-kimi` / `resume-minimax` / `resume-mimo` / `resume-openclaw` / `resume-opencode` / `resume-pi` / `resume-qoder` / `resume-workbuddy` / `resume-zcode`）。
 
 `resume-continue` 读取的是纯 JSON 会话文件，两套实现均无 SQLite / Zstandard 等额外要求，任意 Node.js 与 Python 3.7+ 版本均可运行。
 
-OpenCode、Kilo（kilo.db）、MiniMax（v2/sqlite/runtime-state.sqlite）、MiMo（mimocode.db）、OpenClaw（openclaw-agent.sqlite）、ZCode 与 Hermes 当前版本均使用 SQLite，Node 实现需要 Node.js 22.5+ 的内置 `node:sqlite`；较低版本 Node 请直接运行对应 Python 脚本（`resume-minimax` 在低版本 Node 下会自动降级为仅读取会话 JSONL 并在提示中说明）。
+OpenCode、Kilo（kilo.db）、MiniMax（v2/sqlite/runtime-state.sqlite）、MiMo（mimocode.db）、OpenClaw（openclaw-agent.sqlite）、ZCode 与 Hermes 当前版本均使用 SQLite，Node 实现需要 Node.js 22.5+ 的内置 `node:sqlite`；较低版本 Node 请直接运行对应 Python 脚本（`resume-minimax` 在低版本 Node 下会自动降级为仅读取会话 JSONL 并在提示中说明）。`resume-convert` 的 SQLite 适配器（cursor、hermes、kilo、mimo、minimax、openclaw、opencode、zcode）同样依赖 `node:sqlite`，低版本 Node 请改用其 Python 入口。
 
-DeepSeek Harness 的会话日志使用多帧 Zstandard；`resume-dsh` 的 Node 实现需要带标准库 Zstandard 支持的较新 Node.js，独立 Python 实现使用 Python 3.14+ 标准库 `compression.zstd`（较旧 Python 可安装 `zstandard` 包）。
+DeepSeek Harness 的会话日志使用多帧 Zstandard；`resume-dsh` 的 Node 实现需要带标准库 Zstandard 支持的较新 Node.js，独立 Python 实现使用 Python 3.14+ 标准库 `compression.zstd`（较旧 Python 可安装 `zstandard` 包）。`resume-convert` 的 dsh 适配器要求相同。
 
 ## 接管摘要包含什么
 
